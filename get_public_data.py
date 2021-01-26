@@ -12,45 +12,79 @@ from torchvision.transforms.functional import resize
 os.makedirs('experiments', exist_ok=True)
 os.makedirs('results', exist_ok=True)
 
+def syscall(cmd):
+    if os.name == 'nt':
+        cmd = cmd.replace('unzip', 'Expand-Archive')
+        cmd = cmd.replace(' -d ', ' -DestinationPath ')
+        cmd = "$ProgressPreference = 'SilentlyContinue' && " + cmd
+        cmd = cmd.replace('&&', ';')
+        cmd = cmd.replace('(', '')
+        cmd = cmd.replace(')', '')
+
+        parts = cmd.split(' ')
+        if 'wget' in parts:
+            pos = parts.index('wget')
+            filename = parts[pos+1].split('/')[-1]
+            parts.insert(pos+2, '-OutFile')
+            parts.insert(pos+3, filename)
+        cmd = ' '.join(parts)
+        print(cmd)
+        os.system('powershell.exe '+cmd)
+    else:
+        os.system(cmd)
+
 print('downloading data')
 
-call = 'cd data && curl https://codeload.github.com/sraashis/deepdyn/tar.gz/master | tar -xz --strip=2 deepdyn-master/data'
-os.system(call)
-shutil.rmtree('data/VEVIO')
-shutil.rmtree('data/DRIVE/splits')
-shutil.rmtree('data/STARE/splits')
-shutil.rmtree('data/STARE/labels-vk')
-shutil.rmtree('data/CHASEDB/splits')
-shutil.rmtree('data/AV-WIDE/splits')
+if os.name == 'nt':
+    call = 'cd data && wget https://codeload.github.com/sraashis/deepdyn/tar.gz/master && tar -xzf master --strip=2 deepdyn-master/data && rm master'
+else:
+    call = 'cd data && wget https://codeload.github.com/sraashis/deepdyn/tar.gz/master | tar -xz --strip=2 deepdyn-master/data'
+
+syscall(call)
+shutil.rmtree('data/VEVIO', ignore_errors=True)
+shutil.rmtree('data/HRF', ignore_errors=True)
+shutil.rmtree('data/DR_HAGIS', ignore_errors=True)
+shutil.rmtree('data/DR-HAGIS', ignore_errors=True)
+shutil.rmtree('data/DRIVE/splits', ignore_errors=True)
+shutil.rmtree('data/STARE/splits', ignore_errors=True)
+shutil.rmtree('data/STARE/labels-vk', ignore_errors=True)
+shutil.rmtree('data/CHASEDB/splits', ignore_errors=True)
+shutil.rmtree('data/AV-WIDE/splits', ignore_errors=True)
+shutil.rmtree('results/results_av_drive_hemelings', ignore_errors=True)
 
 call = 'wget http://iflexis.com/downloads/DRIVE_AV_evalmasks.zip && unzip DRIVE_AV_evalmasks.zip -d data/DRIVE ' \
        '&& rm DRIVE_AV_evalmasks.zip && mv data/DRIVE/DRIVE_AV_evalmasks/ZoneB_manual data/DRIVE '\
        '&& mv data/DRIVE/DRIVE_AV_evalmasks/Predicted_AV results/results_av_drive_hemelings && rm -r data/DRIVE/DRIVE_AV_evalmasks'
-os.system(call)
+syscall(call)
 
 
 call = 'mv data/STARE/labels-ah data/STARE/manual && mv data/STARE/stare-images data/STARE/images'
-os.system(call)
+syscall(call)
 
 call ='wget http://webeye.ophth.uiowa.edu/abramoff/AV_groundTruth.zip ' \
       '&& unzip AV_groundTruth.zip -d data/DRIVE && rm AV_groundTruth.zip ' \
       '&& mkdir data/DRIVE/manual_av && mv data/DRIVE/AV_groundTruth/training/av/* data/DRIVE/manual_av ' \
       '&& mv data/DRIVE/AV_groundTruth/test/av/* data/DRIVE/manual_av && rm -r data/DRIVE/AV_groundTruth'
-os.system(call)
+syscall(call)
 
 call ='wget http://iflexis.com/downloads/HRF_AV_GT.zip ' \
       '&& unzip HRF_AV_GT.zip -d data/HRF && rm HRF_AV_GT.zip && mv data/HRF/HRF_AV_GT data/HRF/manual_av'
-os.system(call)
+syscall(call)
 
 call = '(wget https://www5.cs.fau.de/fileadmin/research/datasets/fundus-images/all.zip ' \
        '&& unzip all.zip -d data/HRF && mv data/HRF/manual1 data/HRF/manual' \
        '&& rm all.zip)'
-os.system(call)
+syscall(call)
 
-call = '(wget https://ignaciorlando.github.io/static/data/LES-AV.zip && unzip LES-AV.zip -d data/LES-AV ' \
-       '&& rm LES-AV.zip && mv data/LES-AV data/LES_AV' \
-       '&& rm -r data/LES_AV/__MACOSX)'
-os.system(call)
+if os.name == 'nt':
+    call = '(Invoke-WebRequest https://ndownloader.figshare.com/files/21732282 -OutFile LES_AV.zip && unzip LES_AV.zip -d data/LES-AV ' \
+           '&& rm LES_AV.zip && mv data/LES-AV data/LES_AV' \
+           '&& rm -r data/LES_AV/__MACOSX)'
+else:
+    call = '(wget https://ndownloader.figshare.com/files/21732282 && unzip 21732282 -d data/LES-AV ' \
+           '&& rm 21732282 && mv data/LES-AV data/LES_AV' \
+           '&& rm -r data/LES_AV/__MACOSX)'
+syscall(call)
 
 call = '(mkdir data/LES-AV ' \
        '&& mv data/LES_AV/LES-AV/images data/LES-AV/images ' \
@@ -58,7 +92,7 @@ call = '(mkdir data/LES-AV ' \
        '&& mv data/LES_AV/LES-AV/vessel-segmentations data/LES-AV/manual' \
        '&& mv data/LES_AV/LES-AV/arteries-and-veins data/LES-AV/manual_av ' \
        '&& rm -r data/LES_AV)'
-os.system(call)
+syscall(call)
 
 
 call ='wget http://personalpages.manchester.ac.uk/staff/niall.p.mcloughlin/DRHAGIS.zip ' \
@@ -68,7 +102,7 @@ call ='wget http://personalpages.manchester.ac.uk/staff/niall.p.mcloughlin/DRHAG
       '&& mv data/DR_HAGIS/Manual_Segmentations data/DR_HAGIS/manual' \
       '&& rm data/DR_HAGIS/.DS_Store && rm data/DR_HAGIS/images/.DS_Store ' \
       '&& rm data/DR_HAGIS/manual/.DS_Store && rm data/DR_HAGIS/mask/.DS_Store && mv data/DR_HAGIS data/DR-HAGIS'
-os.system(call)
+syscall(call)
 
 
 print('preparing data')
@@ -119,15 +153,15 @@ df_drive_test.to_csv('data/DRIVE/test.csv', index=False)
 df_drive_all.to_csv('data/DRIVE/test_all.csv', index=False)
 
 # derive A/V split from vessel split
-df_drive_train.gt_paths = [n.replace('manual/', 'manual_av/')
+df_drive_train.gt_paths = [n.replace('\\','/').replace('manual/', 'manual_av/')
                         .replace('manual1.gif', 'training.png')
                         for n in df_drive_train.gt_paths]
 
-df_drive_val.gt_paths = [n.replace('manual/', 'manual_av/')
+df_drive_val.gt_paths = [n.replace('\\','/').replace('manual/', 'manual_av/')
                         .replace('manual1.gif', 'training.png')
                         for n in df_drive_val.gt_paths]
 
-df_drive_test.gt_paths = [n.replace('manual/', 'manual_av/')
+df_drive_test.gt_paths = [n.replace('\\','/').replace('manual/', 'manual_av/')
                         .replace('manual1.gif', 'test.png')
                         for n in df_drive_test.gt_paths]
 df_drive_train.to_csv('data/DRIVE/train_av.csv', index=False)
@@ -136,7 +170,7 @@ df_drive_test.to_csv('data/DRIVE/test_av.csv', index=False)
 print('DRIVE prepared')
 
 df_drive_train_val = pd.concat([df_drive_train, df_drive_val], axis=0)
-
+print(df_drive_train_val)
 for n in df_drive_train_val.gt_paths:
     x = io.imread(n)
     arteries = np.zeros_like(x[:, :, 0])
@@ -274,8 +308,8 @@ for i in tqdm(range(len(all_im_names))):
     im_res = resize(im, size=(im.size[1] // 2, im.size[0] // 2), interpolation=Image.BICUBIC)
     im_res.save(im_name_out)
 
-    mask_name = im_name.replace('/images/', '/mask/').replace('.JPG', '_mask.tif').replace('.jpg', '_mask.tif')
-    mask_name_out = mask_name.replace('/mask/', '/mask_resized/')
+    mask_name = im_name.replace('\\','/').replace('/images/', '/mask/').replace('.JPG', '_mask.tif').replace('.jpg', '_mask.tif')
+    mask_name_out = mask_name.replace('\\','/').replace('/mask/', '/mask_resized/')
     mask = Image.open(mask_name)
     mask_res = resize(mask, size=(mask.size[1] // 2, mask.size[0] // 2), interpolation=Image.NEAREST)
     # get rid of three channels in mask
@@ -284,8 +318,8 @@ for i in tqdm(range(len(all_im_names))):
     mask.save(mask_name)
     mask_res.save(mask_name_out)
 
-    gt_name = im_name.replace('/images/', '/manual/').replace('.JPG', '.tif').replace('.jpg', '.tif')
-    gt_name_out = gt_name.replace('/manual/', '/manual_resized/')
+    gt_name = im_name.replace('\\','/').replace('/images/', '/manual/').replace('.JPG', '.tif').replace('.jpg', '.tif')
+    gt_name_out = gt_name.replace('\\','/').replace('/manual/', '/manual_resized/')
     gt = Image.open(gt_name)
     gt_res = resize(gt, size=(gt.size[1] // 2, gt.size[0] // 2), interpolation=Image.NEAREST)
     gt_res.save(gt_name_out)
@@ -324,21 +358,21 @@ for i in tqdm(range(len(test_im_names))):
 
 av_test = pd.concat([df_hrf_train, df_hrf_val], axis=0)
 
-av_im_paths = [n.replace('images_resized/', 'images/') for n in av_test.im_paths]
-av_gt_paths = [n.replace('manual_resized/', 'manual_av/') for n in av_test.gt_paths]
-av_mask_paths = [n.replace('mask_resized/', 'mask/') for n in av_test.mask_paths]
+av_im_paths = [n.replace('\\','/').replace('images_resized/', 'images/') for n in av_test.im_paths]
+av_gt_paths = [n.replace('\\','/').replace('manual_resized/', 'manual_av/') for n in av_test.gt_paths]
+av_mask_paths = [n.replace('\\','/').replace('mask_resized/', 'mask/') for n in av_test.mask_paths]
 av_test_df = pd.DataFrame(list(zip(av_im_paths,av_gt_paths,av_mask_paths)), columns=['im_paths','gt_paths', 'mask_paths'])
 
 av_train, av_val = df_hrf_test[:24], df_hrf_test[24:]
 
-av_train_im_paths = [n.replace('images/', 'images_resized/') for n in av_train.im_paths]
-av_train_gt_paths = [n.replace('manual_av/', 'manual_av_resized/') for n in av_train.gt_paths]
-av_train_mask_paths = [n.replace('mask/', 'mask_resized/') for n in av_train.mask_paths]
+av_train_im_paths = [n.replace('\\','/').replace('images/', 'images_resized/') for n in av_train.im_paths]
+av_train_gt_paths = [n.replace('\\','/').replace('manual_av/', 'manual_av_resized/') for n in av_train.gt_paths]
+av_train_mask_paths = [n.replace('\\','/').replace('mask/', 'mask_resized/') for n in av_train.mask_paths]
 av_train_df = pd.DataFrame(list(zip(av_train_im_paths,av_train_gt_paths,av_train_mask_paths)), columns=['im_paths','gt_paths', 'mask_paths'])
 
-av_val_im_paths = [n.replace('images/', 'images_resized/') for n in av_val.im_paths]
-av_val_gt_paths = [n.replace('manual_av/', 'manual_av_resized/') for n in av_val.gt_paths]
-av_val_mask_paths = [n.replace('mask/', 'mask_resized/') for n in av_val.mask_paths]
+av_val_im_paths = [n.replace('\\','/').replace('images/', 'images_resized/') for n in av_val.im_paths]
+av_val_gt_paths = [n.replace('\\','/').replace('manual_av/', 'manual_av_resized/') for n in av_val.gt_paths]
+av_val_mask_paths = [n.replace('\\','/').replace('mask/', 'mask_resized/') for n in av_val.mask_paths]
 av_val_df = pd.DataFrame(list(zip(av_val_im_paths,av_val_gt_paths,av_val_mask_paths)), columns=['im_paths','gt_paths', 'mask_paths'])
 
 av_train_df.to_csv('data/HRF/train_av.csv', index=False)
@@ -433,4 +467,3 @@ df_drhagis_all.to_csv('data/DR-HAGIS/test_all.csv', index=False)
 print('DR-HAGIS prepared')
 
 print('All public data prepared, ready to go.')
-
