@@ -303,7 +303,7 @@ df_hrf_val_full_res.to_csv('data/HRF/val_full_res.csv', index=False)
 print('Resizing HRF images (**only** for training, but we resize all because A/V training set is test set on Vessels)\n')
 for i in tqdm(range(len(all_im_names))):
     im_name = all_im_names[i]
-    im_name_out = im_name.replace('/images/', '/images_resized/')
+    im_name_out = im_name.replace('\\','/').replace('/images/', '/images_resized/')
     im = Image.open(im_name)
     im_res = resize(im, size=(im.size[1] // 2, im.size[0] // 2), interpolation=Image.BICUBIC)
     im_res.save(im_name_out)
