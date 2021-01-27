@@ -10,6 +10,7 @@ from sklearn.metrics import roc_curve, auc, confusion_matrix, accuracy_score
 from sklearn.metrics import matthews_corrcoef
 from utils.evaluation import dice_score
 from utils.model_saving_loading import str2bool
+from pathlib import Path
 
 # future-self: dice and f1 are the same thing, but if you use f1_score from sklearn it will be much slower, the reason
 # being that dice here expects bools and it won't work in multi-class scenarios. Same goes for accuracy_score.
@@ -31,8 +32,8 @@ def get_labels_preds(path_to_preds, csv_path):
     all_preds = []
     all_gts = []
     for i in range(len(gt_list)):
-        im_path = im_list[i].rsplit('/', 1)[-1]
-        pred_path = osp.join(path_to_preds, im_path[:-4] + '.png')
+        im_path = Path(im_list[i]).with_suffix('.png').name
+        pred_path = osp.join(path_to_preds, im_path)
         gt_path = gt_list[i]
         mask_path = mask_list[i]
 
