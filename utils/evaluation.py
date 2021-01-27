@@ -20,9 +20,9 @@ def accuracy_score(actual, predicted):
 
 def fast_auc(actual, predicted):
     r = rankdata(predicted)
-    n_pos = np.sum(actual)
+    n_pos = np.sum(actual, dtype=np.int64)
     n_neg = len(actual) - n_pos
-    return (np.sum(r[actual==1]) - n_pos*(n_pos+1)/2) / (n_pos*n_neg)
+    return (np.sum(r[actual==1], dtype=np.int64) - n_pos*(n_pos+1)/2) / (n_pos*n_neg)
 
 def ewma(data, window=5):
     # exponetially-weighted moving averages
