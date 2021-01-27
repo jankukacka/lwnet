@@ -1,7 +1,7 @@
 from torch.utils.data.dataset import Dataset
 from torch.utils.data import DataLoader
 from . import paired_transforms_tv04 as p_tr
-
+from . import caching_data_loader as cdl
 import os
 import os.path as osp
 import pandas as pd
@@ -9,6 +9,7 @@ from PIL import Image
 import numpy as np
 from skimage.measure import regionprops
 import torch
+from functools import lru_cache
 
 class TrainDataset(Dataset):
     def __init__(self, csv_path, transforms=None, label_values=None):
@@ -33,13 +34,23 @@ class TrainDataset(Dataset):
         mask_crop = Image.fromarray(np.array(mask)[minr:maxr, minc:maxc])
         return im_crop, tg_crop, mask_crop
 
-    def __getitem__(self, index):
-        # load image and labels
+    @lru_cache(30)
+    def load_itm(self, index):
         img = Image.open(self.im_list[index])
         target = Image.open(self.gt_list[index])
         mask = Image.open(self.mask_list[index]).convert('L')
-
         img, target, mask = self.crop_to_fov(img, target, mask)
+        return img, target, mask
+
+
+    def __getitem__(self, index):
+        # load image and labels
+        # img = Image.open(self.im_list[index])
+        # target = Image.open(self.gt_list[index])
+        # mask = Image.open(self.mask_list[index]).convert('L')
+        #
+        # img, target, mask = self.crop_to_fov(img, target, mask)
+        img, target, mask = self.load_itm(index)
 
         target = self.label_encoding(target)
 
@@ -167,6 +178,8 @@ def get_train_val_datasets(csv_path_train, csv_path_val, tg_size=(512, 512), lab
 def get_train_val_loaders(csv_path_train, csv_path_val, batch_size=4, tg_size=(512, 512), label_values=(0, 255), num_workers=0):
     train_dataset, val_dataset = get_train_val_datasets(csv_path_train, csv_path_val, tg_size=tg_size, label_values=label_values)
 
+    DataLoader = cdl.CachingDataLoader
+
     train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, num_workers=num_workers, pin_memory=torch.cuda.is_available(), shuffle=True)
     val_loader = DataLoader(dataset=val_dataset, batch_size=batch_size, num_workers=num_workers, pin_memory=torch.cuda.is_available())
     return train_loader, val_loader
@@ -177,6 +190,3 @@ def get_test_dataset(data_path, csv_path='test.csv', tg_size=(512, 512)):
     test_dataset = TestDataset(csv_path=path_test_csv, tg_size=tg_size)
 
     return test_dataset
-
-
-
